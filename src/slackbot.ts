@@ -45,16 +45,39 @@ app.message(async ({ message }) => {
   await replyMessage(message.channel, message.ts);
 });
 
-function parseRequestBody(stringBody: string | null) {
+app.command('/greet', async({body, ack}) => {
+  ack();
+  await app.client.chat.postEphemeral({
+      token: process.env.SLACK_BOT_TOKEN,
+      channel: body.channel_id,
+      text: "Greetings, user!" ,
+      user: body.user_id
+  });
+});
+
+function parseRequestBody(stringBody: string | null, contentType: string | undefined) {
   try {
-    return JSON.parse(stringBody ?? "");
+    let inputStringBody: string = stringBody ?? "";
+    let result: any = {};
+
+    if(contentType && contentType === 'application/x-www-form-urlencoded') {
+      var keyValuePairs = inputStringBody.split('&');
+      keyValuePairs.forEach(function(pair: string): void {
+          let individualKeyValuePair: string[] = pair.split('=');
+          result[individualKeyValuePair[0]] = decodeURIComponent(individualKeyValuePair[1] || '');
+      });
+      return JSON.parse(JSON.stringify(result));
+    } else {
+      return JSON.parse(inputStringBody);
+    }
   } catch {
     return undefined;
   }
 }
 
 export async function handler(event: APIGatewayEvent, context: Context) {
-  const payload = parseRequestBody(event.body);
+  const payload = parseRequestBody(event.body, event.headers["content-type"]);
+
   if(payload && payload.type && payload.type === 'url_verification') {
     return {
       statusCode: 200,
