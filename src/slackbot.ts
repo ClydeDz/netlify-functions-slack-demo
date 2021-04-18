@@ -27,7 +27,21 @@ async function replyMessage(channelId: string, messageThreadTs: string): Promise
   }
 }
 
+async function replyReaction(channelId: string, messageThreadTs: string) {
+  try {
+      await app.client.reactions.add({
+          token: process.env.SLACK_BOT_TOKEN,
+          name: 'robot_face',
+          channel: channelId,
+          timestamp: messageThreadTs,
+      });
+  } catch (error) {
+      console.error(error);
+  }
+}
+
 app.message(async ({ message }) => {
+  await replyReaction(message.channel, message.ts);
   await replyMessage(message.channel, message.ts);
 });
 
