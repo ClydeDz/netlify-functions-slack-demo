@@ -14,8 +14,21 @@ const app = new App({
   receiver: expressReceiver
 });
 
-app.message(async ({ say }) => {
-  await say("Hi :wave:");
+async function replyMessage(channelId: string, messageThreadTs: string): Promise<void> {
+  try {
+    await app.client.chat.postMessage({
+      token: process.env.SLACK_BOT_TOKEN,
+      channel: channelId,
+      thread_ts: messageThreadTs,
+      text: "Hello :wave:"
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+app.message(async ({ message }) => {
+  await replyMessage(message.channel, message.ts);
 });
 
 function parseRequestBody(stringBody: string | null) {
