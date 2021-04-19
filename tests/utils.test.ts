@@ -201,28 +201,28 @@ describe("generateReceiverEvent", (): void => {
     it("returns expected response when no response is passed to ack()", async(): Promise<void> => {
         let payload: any = "";
         let result: ReceiverEvent = generateReceiverEvent(payload);
-        let expectedResponse: IHandlerResponse = null;
+        let actualResponse: IHandlerResponse = null;
 
         await Promise.resolve(result.ack()).then((promiseReturnValue: any)=> {
             let promiseResponse: IHandlerResponse = JSON.parse(JSON.stringify(promiseReturnValue));
-            expectedResponse = {...promiseResponse};
+            actualResponse = {...promiseResponse};
         });
 
-        assert.strictEqual(expectedResponse.body, "");
-        assert.strictEqual(expectedResponse.statusCode, 200);
+        assert.strictEqual(actualResponse.body, "");
+        assert.strictEqual(actualResponse.statusCode, 200);
     });
 
     it("returns expected response when mock response is passed to ack()", async(): Promise<void> => {
         let payload: any = "";
         let result: ReceiverEvent = generateReceiverEvent(payload);
-        let expectedResponse: IHandlerResponse = null;
+        let actualResponse: IHandlerResponse = null;
 
         await Promise.resolve(result.ack("mock response")).then((promiseReturnValue: any)=> {
             let promiseResponse: IHandlerResponse = JSON.parse(JSON.stringify(promiseReturnValue));
-            expectedResponse = {...promiseResponse};
+            actualResponse = {...promiseResponse};
         });
 
-        assert.strictEqual(expectedResponse.body, "mock response");
-        assert.strictEqual(expectedResponse.statusCode, 200);
+        assert.strictEqual(actualResponse.body, "mock response");
+        assert.strictEqual(actualResponse.statusCode, 200);
     });
 });
