@@ -1,87 +1,62 @@
-import { App, ExpressReceiver, ReceiverEvent } from '@slack/bolt'
-import { APIGatewayEvent, Context } from 'aws-lambda'
-import * as dotenv from 'dotenv'
+import { App, ExpressReceiver, ReceiverEvent } from "@slack/bolt";
+import { APIGatewayEvent, Context } from "aws-lambda";
+import * as dotenv from "dotenv";
+import { IHandlerResponse, ISlackPrivateReply, ISlackReactionReply, ISlackReply, SlashCommands } from "./constants";
+import { isUrlVerificationRequest, parseRequestBody, replyMessage, replyPrivateMessage, replyReaction } from "./utils";
+
 dotenv.config();
 
-const expressReceiver = new ExpressReceiver({
+const expressReceiver: ExpressReceiver = new ExpressReceiver({
   signingSecret: `${process.env.SLACK_SIGNING_SECRET}`,
   processBeforeResponse: true
 });
 
-const app = new App({
+const app: App = new App({
   signingSecret: `${process.env.SLACK_SIGNING_SECRET}`,
   token: `${process.env.SLACK_BOT_TOKEN}`,
   receiver: expressReceiver
 });
 
-async function replyMessage(channelId: string, messageThreadTs: string): Promise<void> {
-  try {
-    await app.client.chat.postMessage({
-      token: process.env.SLACK_BOT_TOKEN,
-      channel: channelId,
-      thread_ts: messageThreadTs,
-      text: "Hello :wave:"
-    });
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-async function replyReaction(channelId: string, messageThreadTs: string) {
-  try {
-      await app.client.reactions.add({
-          token: process.env.SLACK_BOT_TOKEN,
-          name: 'robot_face',
-          channel: channelId,
-          timestamp: messageThreadTs,
-      });
-  } catch (error) {
-      console.error(error);
-  }
-}
-
 app.message(async ({ message }) => {
-  await replyReaction(message.channel, message.ts);
-  await replyMessage(message.channel, message.ts);
+  const reactionPacket: ISlackReactionReply = {
+    app: app,
+    botToken: process.env.SLACK_BOT_TOKEN,
+    channelId: message.channel,
+    threadTimestamp: message.ts,
+    reaction: "robot_face"
+  };
+  await replyReaction(reactionPacket);
+
+  const messagePacket: ISlackReply = {
+    app: app,
+    botToken: process.env.SLACK_BOT_TOKEN,
+    channelId: message.channel,
+    threadTimestamp: message.ts,
+    message: "Hello :wave:"
+  };
+  await replyMessage(messagePacket);
 });
 
-app.command('/greet', async({body, ack}) => {
+app.command(SlashCommands.GREET, async({body, ack}) => {
   ack();
-  await app.client.chat.postEphemeral({
-      token: process.env.SLACK_BOT_TOKEN,
-      channel: body.channel_id,
-      text: "Greetings, user!" ,
-      user: body.user_id
-  });
+
+  const messagePacket: ISlackPrivateReply = {
+    app: app,
+    botToken: process.env.SLACK_BOT_TOKEN,
+    channelId: body.channel_id,
+    userId: body.user_id,
+    message: "Greetings, user!"
+  };
+  await replyPrivateMessage(messagePacket);
 });
 
-function parseRequestBody(stringBody: string | null, contentType: string | undefined) {
-  try {
-    let inputStringBody: string = stringBody ?? "";
-    let result: any = {};
+export async function handler(event: APIGatewayEvent, context: Context): Promise<IHandlerResponse> {
+  const payload: any = parseRequestBody(event.body, event.headers["content-type"]);
 
-    if(contentType && contentType === 'application/x-www-form-urlencoded') {
-      var keyValuePairs = inputStringBody.split('&');
-      keyValuePairs.forEach(function(pair: string): void {
-          let individualKeyValuePair: string[] = pair.split('=');
-          result[individualKeyValuePair[0]] = decodeURIComponent(individualKeyValuePair[1] || '');
-      });
-      return JSON.parse(JSON.stringify(result));
-    } else {
-      return JSON.parse(inputStringBody);
-    }
-  } catch {
-    return undefined;
-  }
-}
-
-export async function handler(event: APIGatewayEvent, context: Context) {
-  const payload = parseRequestBody(event.body, event.headers["content-type"]);
-
-  if(payload && payload.type && payload.type === 'url_verification') {
+  if(isUrlVerificationRequest(payload)) {
     return {
       statusCode: 200,
-      body: payload.challenge
+      body: payload?.challenge
     };
   }
 
