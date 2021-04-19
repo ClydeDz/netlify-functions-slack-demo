@@ -2,7 +2,13 @@ import { App, ExpressReceiver, ReceiverEvent } from "@slack/bolt";
 import { APIGatewayEvent, Context } from "aws-lambda";
 import * as dotenv from "dotenv";
 import { IHandlerResponse, ISlackPrivateReply, ISlackReactionReply, ISlackReply, SlashCommands } from "./constants";
-import { isUrlVerificationRequest, parseRequestBody, replyMessage, replyPrivateMessage, replyReaction } from "./utils";
+import {
+  generateReceiverEvent,
+  isUrlVerificationRequest,
+  parseRequestBody,
+  replyMessage,
+  replyPrivateMessage,
+  replyReaction } from "./utils";
 
 dotenv.config();
 
@@ -60,19 +66,7 @@ export async function handler(event: APIGatewayEvent, context: Context): Promise
     };
   }
 
-  const slackEvent: ReceiverEvent = {
-    body: payload,
-    ack: async (response) => {
-      return new Promise<void>((resolve, reject) => {
-        resolve();
-        return {
-          statusCode: 200,
-          body: response ?? ""
-        };
-      });
-    },
-  };
-
+  const slackEvent: ReceiverEvent = generateReceiverEvent(payload);
   await app.processEvent(slackEvent);
 
   return {

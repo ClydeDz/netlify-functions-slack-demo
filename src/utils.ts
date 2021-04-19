@@ -1,3 +1,4 @@
+import { ReceiverEvent } from "@slack/bolt";
 import { ISlackPrivateReply, ISlackReactionReply, ISlackReply } from "./constants";
 
 export function parseRequestBody(stringBody: string | null, contentType: string | undefined): any | undefined {
@@ -22,6 +23,18 @@ export function parseRequestBody(stringBody: string | null, contentType: string 
     } catch {
         return "";
     }
+}
+
+export function generateReceiverEvent(payload: any): ReceiverEvent {
+    return {
+        body: payload,
+        ack: async (response): Promise<any> => {
+            return {
+              statusCode: 200,
+              body: response ?? ""
+            };
+        }
+    };
 }
 
 export function isUrlVerificationRequest(payload: any): boolean {

@@ -1,7 +1,14 @@
 import { assert } from "chai";
-import { isUrlVerificationRequest, parseRequestBody, replyMessage, replyPrivateMessage, replyReaction } from "../src/utils";
+import {
+    generateReceiverEvent,
+    isUrlVerificationRequest,
+    parseRequestBody,
+    replyMessage,
+    replyPrivateMessage,
+    replyReaction } from "../src/utils";
 import sinon from "sinon";
-import { ISlackPrivateReply, ISlackReactionReply, ISlackReply } from "../src/constants";
+import { IHandlerResponse, ISlackPrivateReply, ISlackReactionReply, ISlackReply } from "../src/constants";
+import { ReceiverEvent } from "@slack/bolt";
 
 describe("parseRequestBody", (): void => {
     it("returns empty string when empty string is passed", (): void => {
@@ -25,25 +32,34 @@ describe("parseRequestBody", (): void => {
             team_id: "T1234ABCD",
             team_domain: "demoapp"
         };
-        let result: any = parseRequestBody("token=AbCD123&team_id=T1234ABCD&team_domain=demoapp", "application/x-www-form-urlencoded");
+        let mockBodyInput: string = `token=AbCD123&team_id=T1234ABCD&team_domain=demoapp`;
+
+        let result: any = parseRequestBody(mockBodyInput, "application/x-www-form-urlencoded");
+
         assert.strictEqual(result.token, expectedJson.token);
         assert.strictEqual(result.team_domain, expectedJson.team_domain);
         assert.strictEqual(result.team_id, expectedJson.team_id);
     });
 
-    // todo: fix this test by grabbing the right body
-    // it("returns expected JSON result when url encoded value is passed", (): void => {
-    //     let expectedJson = {
-    //         token: "AbCD123",
-    //         team_id: "T1234ABCD",
-    //         team_domain: "demoapp"
-    //     };
-    //     let result = parseRequestBody("{\r\ntoken: \'AbCD123\',\r\nteam_id: \'T1234ABCD\',\r\nteam_domain: \'demoapp\'\r\n};",
-    //         "application/json");
-    //     expect(result.token).is.equal(expectedJson.token);
-    //     expect(result.team_domain).is.equal(expectedJson.team_domain);
-    //     expect(result.team_id).is.equal(expectedJson.team_id);
-    // });
+    it("returns expected JSON result when JSON value is passed", (): void => {
+        let expectedJson: any = {
+            token: "TOKEN123",
+            team_id: "TEAM123",
+            api_app_id: "APPID123",
+            event: {
+                bot_id: "BOTID",
+                bot_profile: {
+                    id: "BOTPROFLEID"
+                }
+            }
+        };
+        let mockBodyInput: string = `{"token":"TOKEN123","team_id":"TEAM123","api_app_id":"APPID123","event":
+            {"bot_id":"BOTID","bot_profile":{"id":"BOTPROFLEID"}}}`;
+
+        let result: any = parseRequestBody(mockBodyInput, "application/json");
+
+        assert.deepEqual(result, expectedJson);
+    });
 });
 
 describe("isUrlVerificationRequest", (): void => {
@@ -86,7 +102,7 @@ describe("isUrlVerificationRequest", (): void => {
 });
 
 describe("replyMessage", (): void => {
-    it("returns false when payload passed is undefined", (): void => {
+    it("calls postMessage() with the expected parameters", (): void => {
         const fakeApp: any = {
             client: {
                 chat: {
@@ -114,7 +130,7 @@ describe("replyMessage", (): void => {
 });
 
 describe("replyReaction", (): void => {
-    it("returns false when payload passed is undefined", (): void => {
+    it("calls add() with the expected parameters", (): void => {
         const fakeApp: any = {
             client: {
                 reactions: {
@@ -142,7 +158,7 @@ describe("replyReaction", (): void => {
 });
 
 describe("replyPrivateMessage", (): void => {
-    it("returns false when payload passed is undefined", (): void => {
+    it("calls postEphemeral() with the expected parameters", (): void => {
         const fakeApp: any = {
             client: {
                 chat: {
@@ -166,5 +182,47 @@ describe("replyPrivateMessage", (): void => {
         replyPrivateMessage(privateMessagePacket );
         assert.isTrue(fakeApp.client.chat.postEphemeral.called);
         assert.isTrue(fakeApp.client.chat.postEphemeral.calledWith(expectedCalledWith));
+    });
+});
+
+describe("generateReceiverEvent", (): void => {
+    it("returns expected payload in the object", (): void => {
+        let payload: any = "";
+        let result: ReceiverEvent = generateReceiverEvent(payload);
+        assert.strictEqual(result.body, payload);
+    });
+
+    it("returns ack() as a promise", (): void => {
+        let payload: any = "";
+        let result: ReceiverEvent = generateReceiverEvent(payload);
+        assert.isTrue(result.ack() instanceof Promise);
+    });
+
+    it("returns expected response when no response is passed to ack()", async(): Promise<void> => {
+        let payload: any = "";
+        let result: ReceiverEvent = generateReceiverEvent(payload);
+        let expectedResponse: IHandlerResponse = null;
+
+        await Promise.resolve(result.ack()).then((promiseReturnValue: any)=> {
+            let promiseResponse: IHandlerResponse = JSON.parse(JSON.stringify(promiseReturnValue));
+            expectedResponse = {...promiseResponse};
+        });
+
+        assert.strictEqual(expectedResponse.body, "");
+        assert.strictEqual(expectedResponse.statusCode, 200);
+    });
+
+    it("returns expected response when mock response is passed to ack()", async(): Promise<void> => {
+        let payload: any = "";
+        let result: ReceiverEvent = generateReceiverEvent(payload);
+        let expectedResponse: IHandlerResponse = null;
+
+        await Promise.resolve(result.ack("mock response")).then((promiseReturnValue: any)=> {
+            let promiseResponse: IHandlerResponse = JSON.parse(JSON.stringify(promiseReturnValue));
+            expectedResponse = {...promiseResponse};
+        });
+
+        assert.strictEqual(expectedResponse.body, "mock response");
+        assert.strictEqual(expectedResponse.statusCode, 200);
     });
 });
