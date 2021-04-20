@@ -4,7 +4,7 @@
       "module": "CommonJS",
       "strict": true, 
       "declaration": false,
-      "outDir": "./netlify/functions",
+      "outDir": "./netlify",
       "esModuleInterop": true    
     },
     "exclude": [

@@ -1,14 +1,14 @@
 import { App, ExpressReceiver, ReceiverEvent } from "@slack/bolt";
 import { APIGatewayEvent, Context } from "aws-lambda";
 import * as dotenv from "dotenv";
-import { IHandlerResponse, ISlackPrivateReply, ISlackReactionReply, ISlackReply, SlashCommands } from "./constants";
+import { IHandlerResponse, ISlackPrivateReply, ISlackReactionReply, ISlackReply, SlashCommands } from "../constants";
 import {
   generateReceiverEvent,
   isUrlVerificationRequest,
   parseRequestBody,
   replyMessage,
   replyPrivateMessage,
-  replyReaction } from "./utils";
+  replyReaction } from "../utils";
 
 dotenv.config();
 

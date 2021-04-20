@@ -1,7 +1,7 @@
 import { APIGatewayEvent, Context } from "aws-lambda";
 import { assert } from "chai";
 import { IHandlerResponse } from "../src/constants";
-import { handler } from "../src/slackbot";
+import { handler } from "../src/functions/slackbot";
 
 describe("handler", (): void => {
     it("returns challenge when post is of type url_verification", async(): Promise<void> => {
